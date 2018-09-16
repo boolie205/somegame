@@ -5,3 +5,6 @@ testquest = {
     "reward": "A fucking doggo",
     "type": "collect"
   };
+
+  var kek = "niggas in paradise";
+
