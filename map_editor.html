@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<meta charset="utf-8">
+	<link rel="stylesheet" type="text/css" href="css/main.css">
+	<link rel="stylesheet" type="text/css" href="css/canvas.css">
+	<style type="text/css">
+		tr:hover {
+			background: #333;
+		}
+	</style>
+</head>
+<body>
+	
+	<div id="area" style="position: absolute;">
+		Current Area:<br>
+		x:&nbsp;
+		<select id="x" onchange="selectedItem = null; updateSelectedInfo();">
+		</select>
+		,&nbsp;y:&nbsp;
+		<select id="y" onchange="selectedItem = null; updateSelectedInfo();">
+		</select>
+	</div>
+	<div style="margin: 0 auto; text-align: center; padding-bottom: 10px;">
+		Selected Item:<br>
+		<span id="selectedname" style="color: #00CC00;"></span><br>
+		X:&nbsp;<span id="selectedX">n/a</span><br>
+		Y:&nbsp;<span id="selectedY">n/a</span>
+	</div>
+	<canvas width="640" height="480"></canvas>
+	<div id="items"><table border="0"></table></div>
+	<textarea id="mapcode" style="position: absolute; top: 10px; right: 10px;"></textarea>
+
+<script type="text/javascript" src="libs/jquery.js"></script>
+<script type="text/javascript" src="app/constants.js"></script>
+<script type="text/javascript" src="app/items/base.js"></script>
+<script type="text/javascript" src="app/items/data/map_items.js"></script>
+<script type="text/javascript" src="app/map/base.js"></script>
+<script type="text/javascript">
+	/*
+		This be a shitty map editor, matey. (Cheers mate)
+	*/
+
+	var gameCanvas = document.getElementsByTagName("canvas")[0];
+	var gameCanvasContext = gameCanvas.getContext("2d");
+
+	//movement variables
+	var selectedItem = null;
+	var isMovingItem = false;
+	var mouseStart = {x: 0, y: 0};
+
+	var images = [];
+	for(var l = 0; l < Object.keys(map_items).length; l++) {
+		images[l] = new Image();
+		images[l].src = 'images/map_items/' + l + '.png';
+	}
+
+	function getArea() {
+		return mapItems["x:" + x + ",y:" + y];
+	}
+
+	var mapItems = {};
+
+	function addItem(itemId) {
+		if(!getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value))) {
+			mapItems["x:" + document.getElementById("x").value + ",y:" + document.getElementById("y").value] = {items: []};
+		}
+		let items = getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items;
+		items[items.length] = {x: 0, y: 0, item: itemId};
+	}
+
+	$(document).ready(function() {
+		for(var key in map) {
+			if(key.includes("x:")) {
+				mapItems[key] = map[key];
+			}
+		}
+
+		for(var x = -50; x < 0; x++) {
+			$("#x").append('<option value="' + x + '">' + x + '</option>');
+			$("#y").append('<option value="' + x + '">' + x + '</option>');
+		}
+		
+		$("#x").append('<option value="0" selected>0</option>');
+		$("#y").append('<option value="0" selected>0</option>');
+
+		for(var x = 1; x <= 50; x++) {
+			$("#x").append('<option value="' + x + '">' + x + '</option>');
+			$("#y").append('<option value="' + x + '">' + x + '</option>');
+		}
+
+		for(var i = 0; i < Object.keys(map_items).length; i++) {
+			$("#items table").append('<tr><td><img src="images/map_items/' + i + '.png"></td><td>' + map_items[i].name + '</td><td><button onclick="addItem(' + i + ');">Add</button></td></tr>');
+		}
+
+		window.requestAnimationFrame(mainLoop);
+	});
+
+	function getArea(x, y) {
+		return mapItems["x:" + x + ",y:" + y];
+	}
+
+	function removeItem(it) {
+		for(var key in mapItems) {
+			if(it == null) {
+				break;
+			}
+
+			for(var i = 0; i < mapItems[key].items.length; i++) {
+				if(mapItems[key].items[i] == it) {
+					mapItems[key].items.splice(i, 1);
+					selectedItem = null;
+					it = null;
+					break;
+				}
+			}
+		}
+	}
+
+	function mainLoop() {
+		gameCanvasContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+		if(getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value))) {
+			for(var mi = 0; mi < getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items.length; mi++) {
+				gameCanvasContext.drawImage(
+					images[getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[mi].item],
+					getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[mi].x,
+					getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[mi].y
+				);
+				
+				if(selectedItem) {
+					gameCanvasContext.font = "12px Times New Roman";
+					let selectedText = "SELECTED";
+					gameCanvasContext.fillText(selectedText, selectedItem.x - (gameCanvasContext.measureText(selectedText).width / 2) + (map.spriteSize.width / 2), selectedItem.y);
+				}
+			}
+		}
+
+		if(!selectedItem && writeCode) {
+			$("#mapcode").html('');
+			for(var key in mapItems) {
+				let tmpItems = '';
+				for(var i = 0; i < mapItems[key].items.length; i++) {
+					let tmpItem = mapItems[key].items[i];
+					tmpItems = tmpItems + (tmpItems.length > 0 ? ',' : '') + '{x:' + tmpItem.x + ',y:' + tmpItem.y + ',item:' + tmpItem.item + '}';
+				}
+				$("#mapcode").append(($("#mapcode").html().length != 0 ? '\n' : '') + 'map["' + key + '"]={items:[' + tmpItems + ']};');
+			}
+			writeCode = false;
+		}
+		window.requestAnimationFrame(mainLoop);
+	}
+
+	/*
+		Cool movement shit
+	*/
+	var writeCode = false;
+
+	function getItemAtLocation(x, y) {
+		if(!getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value))) {
+			return null;
+		}
+
+		for(var i = 0; i < getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items.length; i++) {
+			if(
+				(getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].x + map.spriteSize.width >= x && getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].x < x) &&
+				(getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].y + map.spriteSize.height >= y && getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].y < y)
+			) {
+				return getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i];
+			}
+		}
+
+		return null;
+	}
+
+	function updateSelectedInfo() {
+		if(selectedItem) {
+			$("#selectedname").html(map_items[selectedItem.item].name);
+			$("#selectedX").html(selectedItem.x);
+			$("#selectedY").html(selectedItem.y);
+		} else {
+			$("#selectedname").html('');
+			$("#selectedX").html('n/a');
+			$("#selectedY").html('n/a');
+		}
+	}
+
+	$("canvas").mousedown(function(e) {
+		let mouseX = e.clientX - e.target.offsetLeft;
+		let mouseY = e.clientY - e.target.offsetTop;
+		selectedItem = getItemAtLocation(mouseX, mouseY);
+		if(selectedItem) {
+			mouseStart = {x: mouseX - selectedItem.x, y: mouseY - selectedItem.y};
+			isMovingItem = true;
+			writeCode = true;
+			updateSelectedInfo();
+		}
+	});
+
+	$("canvas").mouseup(function() {
+		isMovingItem = false;
+	});
+
+	$(window).keydown(function(e) {
+		if(e.keyCode == 27) {
+			selectedItem = null;
+		} else if(selectedItem) {
+			if(e.keyCode == KEYS.MOVE_DOWN) {
+				selectedItem.y++;
+			} else if(e.keyCode == KEYS.MOVE_UP) {
+				selectedItem.y--;
+			} else if(e.keyCode == KEYS.MOVE_LEFT) {
+				selectedItem.x--;
+			} else if(e.keyCode == KEYS.MOVE_RIGHT) {
+				selectedItem.x++;
+			} else if(e.keyCode == 46) {
+				removeItem(selectedItem);
+			}
+		} else {
+			return true;
+		}
+
+		updateSelectedInfo();
+	});
+
+	$("canvas").mousemove(function(e) {
+		if(selectedItem && isMovingItem) {
+			let mouseX = e.clientX - e.target.offsetLeft;
+			let mouseY = e.clientY - e.target.offsetTop;
+			selectedItem.x = mouseX - mouseStart.x;
+			selectedItem.y = mouseY - mouseStart.y;
+			updateSelectedInfo();
+		}
+	});
+</script>
+</body>
+</html>

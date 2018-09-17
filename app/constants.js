@@ -11,3 +11,9 @@ var DIRECTION = {
 	LEFT: 2,
 	RIGHT: 3
 };
+
+var ITEM_FLAGS = {
+	none: 0,
+	blocking: (1 << 0),
+	movable: (1 << 1)
+};
