@@ -1,10 +1,10 @@
 testquest = {
     "id": 1,
-    "name": "Find this niggas doggo",
-    "description": "giga nigga lost his doggo, help a brotha out",
-    "reward": "A fucking doggo",
+    "name": "Find this  doggo",
+    "description": "bloke lost his doggo, help a brotha out",
+    "reward": "Mangey doggo",
     "type": "collect"
   };
 
-  var kek = "niggas in paradise";
+
 
