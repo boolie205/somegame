@@ -3,15 +3,23 @@ character.spriteSize = {width: 32, height: 32, sourceWidth: 36, sourceHeight: 36
 character.stats = {
 	health: 100,
 	healthMax: 100,
-	attack: 0,
 	defense: 0,
 	attackSpeed: 500,
 	movementSpeed: 100//movementSpeed should always be >= 60
+};
+character.inventory = {
+	weapon: {
+		attack: 5,
+		range: 1,
+		hitChance: 100
+	}
 };
 character.lastMovement = 0;
 character.movementStatesTotal = 2;
 character.lastMovementAnimation = 0;
 character.isFrozen = false;
+character.attackingMonster = null;
+character.lastCombat = 0;
 
 character.moveArea = function(direction) {
 	if(direction == DIRECTION.DOWN) {
@@ -28,5 +36,5 @@ character.moveArea = function(direction) {
 		this.currentPosition.x = 0;
 	}
 
-	map.enterArea(character.currentPosition.area);
+	map.enterArea(map.getArea(character.currentPosition.area));
 }

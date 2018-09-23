@@ -18,8 +18,9 @@ for(var monsterKey in monsterTypes) {
 characterSprite.src = "images/character/default.png";
 
 $(window).ready(function() {
-	map.enterArea(character.currentPosition.area);
+	map.enterArea(map.getArea(character.currentPosition.area));
 	setTimeout(movementLoop, 0);
+	setTimeout(doCombat, 0);
 	window.requestAnimationFrame(mainLoop);
 });
 
@@ -44,6 +45,43 @@ $(window).keyup(function(e) {
 	}
 });
 
+function getDistanceBetween(s, d){
+	let dx = (s.x / 32) - (d.x / 32);
+	let dy = (s.y / 32) - (d.y / 32);
+	return Math.floor(Math.sqrt(dx*dx + dy*dy));
+}
+
+function onKill(monster) {//here you can add to quest and shit later
+
+}
+
+function doCombat() {
+	if(character.lastCombat < Math.round((new Date()).getTime()) - character.stats.attackSpeed) {
+		if(character.attackingMonster) {
+			if(getDistanceBetween(character.currentPosition, character.attackingMonster.position) <= character.inventory.weapon.range) {
+				let attackStrength = Math.floor(Math.random() * (character.inventory.weapon.attack - (character.inventory.weapon.hitChance / 100)) + (character.inventory.weapon.hitChance / 100));
+				console.log(attackStrength);
+				if(attackStrength == 0) {
+					console.log("You missed.");
+				}
+				character.attackingMonster.stats.health = (character.attackingMonster.stats.health - attackStrength > 0 ? character.attackingMonster.stats.health - attackStrength : 0);
+				if(character.attackingMonster.stats.health == 0) {
+					for(var m in monsters) {
+						if(monsters[m] == character.attackingMonster) {
+							onKill(character.attackingMonster);
+							delete monsters[m];
+							break;
+						}
+					}
+					character.attackingMonster = null;
+				}
+				character.lastCombat = Math.round((new Date()).getTime());
+			}
+		}
+	}
+	setTimeout(doCombat, 0);
+}
+
 function drawHealthBar() {
 	gameCanvasContext.fillStyle = "#000000";
 	gameCanvasContext.fillRect(character.currentPosition.x, character.currentPosition.y - 12, character.spriteSize.width, 6);
@@ -51,6 +89,17 @@ function drawHealthBar() {
 	let healthBarMaxWidth = character.spriteSize.width - 4;
 	gameCanvasContext.fillStyle = (characterHealthPercentage > 50 ? "#00FF00" : (characterHealthPercentage > 33 ? "#FFFF00" : "#FF0000"));
 	gameCanvasContext.fillRect(character.currentPosition.x + 2, character.currentPosition.y - 10, (healthBarMaxWidth / 100) * characterHealthPercentage, 2);
+}
+
+function drawMonsterHealthBar(monster) {
+	gameCanvasContext.fillStyle = "#000000";
+	gameCanvasContext.fillRect(monster.position.x, monster.position.y - 12, 32, 6);
+	let monsterHealthPercentage = (100 / monster.stats.healthMax) * monster.stats.health;
+	let healthBarMaxWidth = 28;
+	gameCanvasContext.fillStyle = (monsterHealthPercentage > 50 ? "#00FF00" : (monsterHealthPercentage > 33 ? "#FFFF00" : "#FF0000"));
+	gameCanvasContext.fillRect(monster.position.x + 2, monster.position.y - 10, (healthBarMaxWidth / 100) * monsterHealthPercentage, 2);
+	gameCanvasContext.font = "10px Arial";
+	gameCanvasContext.fillText(monster.name, monster.position.x - (gameCanvasContext.measureText(monster.name).width / 2) + 16, monster.position.y - 16);
 }
 
 function movementLoop() {
@@ -127,18 +176,6 @@ function mainLoop() {
 		for(var ii = 0; ii < currentArea.items.length; ii++) {
 			gameCanvasContext.drawImage(mapItems[currentArea.items[ii].item], currentArea.items[ii].x, currentArea.items[ii].y);
 		}
-
-		if(currentArea.monsters) {
-		for(var mi = 0; mi < currentArea.monsters.length; mi++) {
-				gameCanvasContext.drawImage(
-					monsterImages[currentArea.monsters[mi].name],
-					0, 0,
-					32, 32,
-					currentArea.monsters[mi].x, currentArea.monsters[mi].y,
-					32, 32
-				);
-			}
-		}
 	}
 
 	gameCanvasContext.drawImage(
@@ -148,7 +185,44 @@ function mainLoop() {
 		character.currentPosition.x, character.currentPosition.y,
 		character.spriteSize.width, character.spriteSize.height
 	);
-	drawHealthBar();
 
+	if(monsters) {
+		for(var mk in monsters) {
+			drawMonsterHealthBar(monsters[mk]);
+			gameCanvasContext.drawImage(
+				monsterImages[monsters[mk].name],
+				0, 0,
+				32, 32,
+				monsters[mk].position.x, monsters[mk].position.y,
+				32, 32
+			);
+
+			if(character.attackingMonster) {
+				if(monsters[mk] == character.attackingMonster) {
+					gameCanvasContext.save();
+					gameCanvasContext.fillStyle = "#FF0000";
+					gameCanvasContext.globalAlpha = 0.5;
+					gameCanvasContext.fillRect(monsters[mk].position.x, monsters[mk].position.y, 32, 32);
+					gameCanvasContext.restore();
+				}
+			}
+		}
+	}
+
+	drawHealthBar();
 	window.requestAnimationFrame(mainLoop);
 }
+
+$(gameCanvas).contextmenu(function(e) {
+	let mouseX = e.clientX - e.target.offsetLeft;
+	let mouseY = e.clientY - e.target.offsetTop;
+	let monsterClick = map.monsterAtPosition(mouseX, mouseY);
+	if(monsterClick) {
+		if(character.attackingMonster) {
+			character.attackingMonster = (monsterClick == character.attackingMonster ? null : monsterClick);
+		} else {
+			character.attackingMonster = monsterClick;
+		}
+	}
+	return false;
+});
