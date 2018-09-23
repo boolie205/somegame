@@ -7,10 +7,5 @@ var questlog;
 
 
 //track current and completed quests. I'm putting them in arrays. I think this is probably retarded. But fuck it.
-var currentQuests = ["quest1", "quest2", "quest3"];
-var completedQuests  = ["quest4", "quest5", "quest6"];
-
-
-
-
-
+var currentQuests = [];
+var completedQuests = [];

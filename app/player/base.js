@@ -9,7 +9,7 @@ character.stats = {
 };
 character.inventory = {
 	weapon: {
-		attack: 5,
+		attack: 50,
 		range: 1,
 		hitChance: 100
 	}

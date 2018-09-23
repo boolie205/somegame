@@ -18,6 +18,7 @@ for(var monsterKey in monsterTypes) {
 characterSprite.src = "images/character/default.png";
 
 $(window).ready(function() {
+	currentQuests[0] = quests.getKillQuestById(0);
 	map.enterArea(map.getArea(character.currentPosition.area));
 	setTimeout(movementLoop, 0);
 	setTimeout(doCombat, 0);
@@ -52,7 +53,24 @@ function getDistanceBetween(s, d){
 }
 
 function onKill(monster) {//here you can add to quest and shit later
-
+	for(var k in currentQuests) {
+		let currentQuest = currentQuests[k];
+		if(currentQuest.type == "kill") {
+			for(var x = 0; x < currentQuest.requiredKills.length; x++) {
+				for(var i in currentQuest.requiredKills[x]) {
+					if(i == monster.name) {
+						if(currentQuest.requiredKills[x][i] > currentQuest.requiredKills[x].progress + 1) {
+							currentQuest.requiredKills[x].progress++;
+						} else {
+							currentQuest.requiredKills[x].progress++;
+							completedQuests[completedQuests.length] = currentQuest;
+							delete currentQuests[k];
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 function doCombat() {
@@ -60,10 +78,6 @@ function doCombat() {
 		if(character.attackingMonster) {
 			if(getDistanceBetween(character.currentPosition, character.attackingMonster.position) <= character.inventory.weapon.range) {
 				let attackStrength = Math.floor(Math.random() * (character.inventory.weapon.attack - (character.inventory.weapon.hitChance / 100)) + (character.inventory.weapon.hitChance / 100));
-				console.log(attackStrength);
-				if(attackStrength == 0) {
-					console.log("You missed.");
-				}
 				character.attackingMonster.stats.health = (character.attackingMonster.stats.health - attackStrength > 0 ? character.attackingMonster.stats.health - attackStrength : 0);
 				if(character.attackingMonster.stats.health == 0) {
 					for(var m in monsters) {
