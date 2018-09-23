@@ -2,21 +2,26 @@ var gameCanvas = document.getElementsByTagName("canvas")[0];
 var gameCanvasContext = gameCanvas.getContext("2d");
 
 var characterSprite = new Image();
-var mapItems = [new Image(), new Image(), new Image()];
-var movementLoopInterval = null;
+var mapItems = [];
+var monsterImages = [];
 
-for(var i = 0; i < mapItems.length; i++) {
-	mapItems[i].src = "images/map_items/"+String(i)+".png";
+for(var itemKey in map_items) {
+	mapItems[itemKey] = new Image();
+	mapItems[itemKey].src = 'images/map_items/' + itemKey + '.png';
+}
+
+for(var monsterKey in monsterTypes) {
+	monsterImages[monsterKey] = new Image();
+	monsterImages[monsterKey].src = 'images/monster/' + monsterKey.toLowerCase() + '.png';
 }
 
 characterSprite.src = "images/character/default.png";
 
-characterSprite.onload = function() {
-	if(!movementLoopInterval) {
-		movementLoopInterval = setInterval(movementLoop, 1);
-	}
+$(window).ready(function() {
+	map.enterArea(character.currentPosition.area);
+	setTimeout(movementLoop, 0);
 	window.requestAnimationFrame(mainLoop);
-};
+});
 
 var lastMoveAnimation = 0;
 var keyState = {};
@@ -49,10 +54,10 @@ function drawHealthBar() {
 }
 
 function movementLoop() {
-	if(character.isMoving()) {
+	if(character.isMoving() && !character.isFrozen) {
 		if(character.lastMovement < Math.round((new Date()).getTime()) - character.stats.movementSpeed) {
 			if(character.lastMovementAnimation < Math.round((new Date()).getTime()) - 100) {
-				character.movementState = (character.movementState < 3 ? character.movementState + 1 : 0);
+				character.movementState = (character.movementState < character.movementStatesTotal ? character.movementState + 1 : 0);
 				character.lastMovementAnimation = Math.round((new Date()).getTime());
 			}
 			
@@ -61,11 +66,11 @@ function movementLoop() {
 					character.currentPosition.direction = DIRECTION.DOWN;
 				}
 
-				if(!map.isBlocking(character.currentPosition.x, character.currentPosition.y + 1, character.currentPosition.area)) {
+				if(!map.isBlocking(character.currentPosition.x, character.currentPosition.y + 32, character.currentPosition.area)) {
 					if(character.currentPosition.y + character.spriteSize.height + 1 > gameCanvas.height) {
 						character.moveArea(DIRECTION.DOWN);
 					} else {
-						character.currentPosition.y++;
+						character.currentPosition.y += 32;
 					}
 				}
 			} else if(keyState[KEYS.MOVE_UP]) {
@@ -73,11 +78,11 @@ function movementLoop() {
 					character.currentPosition.direction = DIRECTION.UP;
 				}
 
-				if(!map.isBlocking(character.currentPosition.x, character.currentPosition.y - 1, character.currentPosition.area)) {
+				if(!map.isBlocking(character.currentPosition.x, character.currentPosition.y - 32, character.currentPosition.area)) {
 					if(character.currentPosition.y - 1 < 0) {
 						character.moveArea(DIRECTION.UP);
 					} else {
-						character.currentPosition.y--;
+						character.currentPosition.y -= 32;
 					}
 				}
 			} else if(keyState[KEYS.MOVE_LEFT]) {
@@ -85,11 +90,11 @@ function movementLoop() {
 					character.currentPosition.direction = DIRECTION.LEFT;
 				}
 
-				if(!map.isBlocking(character.currentPosition.x - 1, character.currentPosition.y, character.currentPosition.area)) {
+				if(!map.isBlocking(character.currentPosition.x - 32, character.currentPosition.y, character.currentPosition.area)) {
 					if(character.currentPosition.x - 1 < 0) {
 						character.moveArea(DIRECTION.LEFT);
 					} else {
-						character.currentPosition.x--;
+						character.currentPosition.x -= 32;
 					}
 				}
 			} else if(keyState[KEYS.MOVE_RIGHT]) {
@@ -97,11 +102,11 @@ function movementLoop() {
 					character.currentPosition.direction = DIRECTION.RIGHT;
 				}
 
-				if(!map.isBlocking(character.currentPosition.x + 1, character.currentPosition.y, character.currentPosition.area)) {
+				if(!map.isBlocking(character.currentPosition.x + 32, character.currentPosition.y, character.currentPosition.area)) {
 					if(character.currentPosition.x + character.spriteSize.width + 1 > gameCanvas.width) {
 						character.moveArea(DIRECTION.RIGHT);
 					} else {
-						character.currentPosition.x++;
+						character.currentPosition.x += 32;
 					}
 				}
 			}
@@ -110,21 +115,36 @@ function movementLoop() {
 	} else if(character.movementState != 0) {
 		character.movementState = 0;
 	}
+
+	setTimeout(movementLoop, 0);
 }
 
 function mainLoop() {
 	gameCanvasContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);	
 
 	if(map.getArea(character.currentPosition.area)) {
-		for(var mi = 0; mi < map.getArea(character.currentPosition.area).items.length; mi++) {
-			gameCanvasContext.drawImage(mapItems[map.getArea(character.currentPosition.area).items[mi].item], map.getArea(character.currentPosition.area).items[mi].x, map.getArea(character.currentPosition.area).items[mi].y);
+		let currentArea = map.getArea(character.currentPosition.area);
+		for(var ii = 0; ii < currentArea.items.length; ii++) {
+			gameCanvasContext.drawImage(mapItems[currentArea.items[ii].item], currentArea.items[ii].x, currentArea.items[ii].y);
+		}
+
+		if(currentArea.monsters) {
+		for(var mi = 0; mi < currentArea.monsters.length; mi++) {
+				gameCanvasContext.drawImage(
+					monsterImages[currentArea.monsters[mi].name],
+					0, 0,
+					32, 32,
+					currentArea.monsters[mi].x, currentArea.monsters[mi].y,
+					32, 32
+				);
+			}
 		}
 	}
 
 	gameCanvasContext.drawImage(
 		characterSprite,
-		character.movementState * character.spriteSize.width, character.currentPosition.direction * character.spriteSize.height,
-		character.spriteSize.width, character.spriteSize.height,
+		character.movementState * character.spriteSize.sourceWidth, character.currentPosition.direction * character.spriteSize.sourceHeight,
+		character.spriteSize.sourceWidth, character.spriteSize.sourceHeight,
 		character.currentPosition.x, character.currentPosition.y,
 		character.spriteSize.width, character.spriteSize.height
 	);

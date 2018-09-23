@@ -1,0 +1,3 @@
+monsterTypes["Fagmingo"] = {
+
+};

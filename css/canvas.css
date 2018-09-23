@@ -1,14 +1,5 @@
 canvas {
 	display: block;
 	margin: 0 auto;
-<<<<<<< HEAD
-	background: #333333;
-=======
-	background: #FFFFFF;
-}
-
-.quest-test{
-
-	font-size: 21px;
->>>>>>> 7cd48c1f2cce436e9f5b21398e31577f44fa5c6b
+	background: #000000;
 }

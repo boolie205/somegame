@@ -9,6 +9,10 @@
 		tr:hover {
 			background: #333;
 		}
+
+		canvas {
+			background: #333;
+		}
 	</style>
 </head>
 <body>
@@ -21,6 +25,13 @@
 		,&nbsp;y:&nbsp;
 		<select id="y" onchange="selectedItem = null; updateSelectedInfo();">
 		</select>
+	</div>
+	<div id="moveeverything" style="position: absolute; top: 100px">
+		Move everything<br>
+		<button onclick="moveAll(DIRECTION.UP);">Up</button><br>
+		<button onclick="moveAll(DIRECTION.LEFT);">Left</button><button onclick="moveAll(DIRECTION.RIGHT);">Right</button><br>
+		<button onclick="moveAll(DIRECTION.DOWN);">Down</button><br><br>
+		<button onclick="clearArea();">Clear Area</button>
 	</div>
 	<div style="margin: 0 auto; text-align: center; padding-bottom: 10px;">
 		Selected Item:<br>
@@ -39,7 +50,7 @@
 <script type="text/javascript" src="app/map/base.js"></script>
 <script type="text/javascript">
 	/*
-		This be a shitty map editor, matey. (Cheers mate)   - Do one robin. Do one. 
+		This be a shitty map editor, matey. (Cheers mate)
 	*/
 
 	var gameCanvas = document.getElementsByTagName("canvas")[0];
@@ -62,12 +73,75 @@
 
 	var mapItems = {};
 
-	function addItem(itemId) {
+	function addItem(itemId, toX = 0, toY = 0) {
 		if(!getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value))) {
 			mapItems["x:" + document.getElementById("x").value + ",y:" + document.getElementById("y").value] = {items: []};
 		}
 		let items = getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items;
-		items[items.length] = {x: 0, y: 0, item: itemId};
+		items[items.length] = {x: toX, y: toY, item: itemId};
+		return items[items.length - 1];
+	}
+
+	function moveAll(dir) {
+		for(var key in mapItems) {
+			for(var i = 0; i < mapItems[key].items.length; i++) {
+				if(dir == DIRECTION.UP) {
+					mapItems[key].items[i].y--;
+				} else if(dir == DIRECTION.DOWN) {
+					mapItems[key].items[i].y++;
+				} else if(dir == DIRECTION.LEFT) {
+					mapItems[key].items[i].x--;
+				} else if(dir == DIRECTION.RIGHT) {
+					mapItems[key].items[i].x++;
+				}
+			}
+		}
+	}
+
+	function fillEdge(itemId, dir) {
+		if(dir == DIRECTION.LEFT) {
+			for(var i = 0; i < gameCanvas.height; i += map.spriteSize.height) {
+				if(!getItemAtLocation(0, i + 1)) {
+					addItem(itemId, 0, i);
+				}
+			}
+		} else if(dir == DIRECTION.RIGHT) {
+			for(var i = 0; i < gameCanvas.height; i += map.spriteSize.height) {
+				if(!getItemAtLocation(gameCanvas.width - map.spriteSize.width, i + 1)) {
+					addItem(itemId, gameCanvas.width - map.spriteSize.width, i);
+				}
+			}
+		} else if(dir == DIRECTION.UP) {
+			for(var i = 0; i < gameCanvas.width; i += map.spriteSize.width) {
+				if(!getItemAtLocation(i + 1, 0)) {
+					addItem(itemId, i, 0);
+				}
+			}
+		} else if(dir == DIRECTION.DOWN) {
+			for(var i = 0; i < gameCanvas.width; i += map.spriteSize.width) {
+				if(!getItemAtLocation(i + 1, gameCanvas.height - map.spriteSize.height)) {
+					addItem(itemId, i, gameCanvas.height - map.spriteSize.height);
+				}
+			}
+		}
+	}
+
+	function fillAll(itemId) {
+		for(var x = 0; x < gameCanvas.width; x += map.spriteSize.width) {
+			for(var i = 0; i < gameCanvas.height; i += map.spriteSize.height) {
+				if(!getItemAtLocation(x + 1, i + 1)) {
+					addItem(itemId, x, i);
+				}
+			}
+		}
+	}
+
+	function clearArea() {
+		for(var x = 0; x < gameCanvas.width; x += map.spriteSize.width) {
+			for(var i = 0; i < gameCanvas.height; i += map.spriteSize.height) {
+				removeItem(getItemAtLocation(x, i));
+			}
+		}
 	}
 
 	$(document).ready(function() {
@@ -91,7 +165,7 @@
 		}
 
 		for(var i = 0; i < Object.keys(map_items).length; i++) {
-			$("#items table").append('<tr><td><img src="images/map_items/' + i + '.png"></td><td>' + map_items[i].name + '</td><td><button onclick="addItem(' + i + ');">Add</button></td></tr>');
+			$("#items table").append('<tr><td><img src="images/map_items/' + i + '.png"></td><td>' + map_items[i].name + '</td><td><button onclick="addItem(' + i + ');">Add</button>&nbsp;-&nbsp;<button onclick="fillEdge(' + i + ', DIRECTION.LEFT);">Fill left</button><button onclick="fillEdge(' + i + ', DIRECTION.RIGHT);">Fill right</button><button onclick="fillEdge(' + i + ', DIRECTION.UP);">Fill top</button><button onclick="fillEdge(' + i + ', DIRECTION.DOWN);">Fill bottom</button><button onclick="fillAll(' + i + ');">Fill All</button></td></tr>');
 		}
 
 		window.requestAnimationFrame(mainLoop);
@@ -153,9 +227,7 @@
 	}
 
 	/*
-		Cool movement shit 
-
-		- very cool actually.    also, wtf  is this "write code" variable Also why arn't you using 'let' retard  - lewis
+		Cool movement shit
 	*/
 	var writeCode = false;
 
@@ -166,8 +238,8 @@
 
 		for(var i = 0; i < getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items.length; i++) {
 			if(
-				(getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].x + map.spriteSize.width >= x && getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].x < x) &&
-				(getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].y + map.spriteSize.height >= y && getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].y < y)
+				(getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].x + map.spriteSize.width >= x && getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].x <= x) &&
+				(getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].y + map.spriteSize.height >= y && getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i].y <= y)
 			) {
 				return getArea(parseInt(document.getElementById("x").value), parseInt(document.getElementById("y").value)).items[i];
 			}
@@ -189,6 +261,7 @@
 	}
 
 	$("canvas").mousedown(function(e) {
+		console.log(e.target.offsetTop);
 		let mouseX = e.clientX - e.target.offsetLeft;
 		let mouseY = e.clientY - e.target.offsetTop;
 		selectedItem = getItemAtLocation(mouseX, mouseY);

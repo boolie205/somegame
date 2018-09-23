@@ -1,0 +1,2 @@
+var monsterTypes = {};
+var monsters = {};

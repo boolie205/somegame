@@ -12,11 +12,8 @@ const DIRECTION = {
 	RIGHT: 3
 };
 
-<<<<<<< HEAD
-var ITEM_FLAGS = {
+const ITEM_FLAGS = {
 	none: 0,
 	blocking: (1 << 0),
 	movable: (1 << 1)
 };
-=======
->>>>>>> 7cd48c1f2cce436e9f5b21398e31577f44fa5c6b
