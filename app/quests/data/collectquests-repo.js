@@ -37,9 +37,10 @@ testquest = {
     "npctext": "Lorum ipsum dolor sit amet, kill demon bacom pigfat phone kek rofl",
     "reward": "Silverlight",
     "type": "kill",
-    "requiredamount": "5",
-    "requiredentity": "mobID"
-    
+    requiredKills: {
+    "Demon": 5,
+    "GiantDemon": 1
+    }
   };
 
 
